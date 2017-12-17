@@ -52,7 +52,6 @@ def GetFilenameList(system_list_output, OSTYPE, current_dir=None):
 
 def LoadAudio(file_names, has_genres, OSTYPE, crop=False, numcep=30, winlen=0.025, winstep=0.01):
     """
-        file_names - строка или список
         Если has_genres == True:
             Загружает аудио из папок вида "жанр"\(/)"название песни" (пример: jazz\001.jazz.wav - для Windows, / для Linux).
         Иначе:
@@ -64,8 +63,6 @@ def LoadAudio(file_names, has_genres, OSTYPE, crop=False, numcep=30, winlen=0.02
     columns_audio_file = ['genre', 'file_name', 'samplerate', 'duration', 'audio_data'] #Информация о файле и его содержимом в pd.DataFrame
     audio_files = pd.DataFrame(columns=columns_audio_file)
     
-    if type(file_names) == str:
-        file_names = [file_names]
     for k, file_name in enumerate(file_names):
         audio_file = pd.Series(index=columns_audio_file)
         splited = file_name.split('/' if (OSTYPE == 'Linux') else '\\')
@@ -76,25 +73,11 @@ def LoadAudio(file_names, has_genres, OSTYPE, crop=False, numcep=30, winlen=0.02
         audio_data_librosa, audio_file.samplerate = lb.load(file_name)
         audio_file.duration = len(audio_data_librosa)/audio_file.samplerate
         audio_file.audio_data = np.array(audio_data_librosa)
-        if crop == False or audio_file.duration <= 60.0:
-            audio_file.audio_data = np.array(audio_data_librosa)
-        else:
-            #Отрезаем по 10 сек с начала и конца, оставшиеся делим на 15 сек фрагменты (возм. последний меньше)
-            #Берем по 2 случайных из каждых четырех+1 из остатка
-            audio_data_list = list()
-            left_borders = np.arange(10*audio_file.samplerate, len(audio_data_librosa)-10*audio_file.samplerate, 15*audio_file.samplerate, dtype=int)
-            count_left = len(left_borders)
-            left_borders = np.array(list(left_borders)+[len(audio_data_librosa)-10*audio_file.samplerate])
-            for i in xrange(0, count_left, 4):
-                if i + 4 > count_left:
-                    break
-                random_fragments = np.random.choice(4, 2)
-                audio_data_list += list(audio_data_librosa[left_borders[i+random_fragments[0]]:left_borders[i+random_fragments[0]+1]])
-                #audio_data_list += list(audio_data_librosa[left_borders[i+random_fragments[1]]:left_borders[i+random_fragments[1]+1]])
-            if i + 4 != count_left: #Разделилось на фрагменты по 4 без остатка
-                random_fragment = np.random.choice(len(left_borders) - i)
-                audio_data_list += list(audio_data_librosa[left_borders[random_fragment]:left_borders[random_fragment+1]])
-            audio_file.audio_data = np.array(audio_data_list)
+#        if crop == False or audio_file.duration <= 60.0:
+#            audio_file.audio_data = np.array(audio_data_librosa)
+#        else: #Берем duration/20 случайных фрагментов по 10 секунд
+#            audio_data_list = list()
+#            borders = np.linspace(0, len(audio_data_librosa), num=int(audio_file.duration/10+1), dtype=int)
             
         audio_files = audio_files.append(audio_file, ignore_index=True)
     
@@ -112,8 +95,6 @@ def PrepareDataForModel(dataframe, labels_dict, normalize=True, shuffle=True):
     #.any() = True, если есть хоть один True => должен быть False
     if not dataframe.iloc[:,0].isnull().values.any():
         y = np.array([labels_dict[value] for value in dataframe.iloc[:,0].values]) #Преобразование согласно меткам
-    else:
-        y = dataframe.iloc[:,0].values
     
     # Объединение списков фич в единый список
     res = list()
@@ -170,3 +151,16 @@ def PlotConfusionMatrix(cm, classes, threshold_ratio=0.5, normalize=False, title
     plt.tight_layout()
     plt.ylabel('True label')
     plt.xlabel('Predicted label')
+    
+def StringToList(string):
+    string = string.replace("\n", "")
+    string = string[1:-1] # Убираем квадратные скобки
+
+    result = list()
+    for s in string.split(" "):
+        if s == "":
+            continue
+        else:
+            result.append(float(s))
+
+    return result
