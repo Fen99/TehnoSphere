@@ -80,7 +80,7 @@ def LoadAudio(file_names, has_genres, OSTYPE, crop=False, numcep=30, winlen=0.02
             audio_file.audio_data = np.array(audio_data_librosa)
         else:
             #Отрезаем по 10 сек с начала и конца, оставшиеся делим на 15 сек фрагменты (возм. последний меньше)
-            #Берем по 2 случайных из каждых четырех+1 из остатка
+            #Берем по по 1 случайному из каждой четверки (исправлено с 2х случайных!)+1 из остатка
             audio_data_list = list()
             left_borders = np.arange(10*audio_file.samplerate, len(audio_data_librosa)-10*audio_file.samplerate, 15*audio_file.samplerate, dtype=int)
             count_left = len(left_borders)
