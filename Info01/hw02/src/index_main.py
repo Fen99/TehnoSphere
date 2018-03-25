@@ -4,8 +4,8 @@ from docreader import GetDocs
 
 import index
 
-#Параметры командной строки, соответствующие массиву COMPRESSION_OBJECTS
-COMPRESSION_OBJECTS_NAMES = ['varbyte',  'simple9']
+#Параметры командной строки, соответствующие массиву COMPRESSION_CLASSES
+COMPRESSION_CLASSES_NAMES = ['varbyte',  'simple9']
 
 def parse_command_line():
     parser = argparse.ArgumentParser(description='compressed documents reader')
@@ -18,7 +18,7 @@ def parse_command_line():
     
 ##main
 compression,  filenames = parse_command_line()
-compression_object = index.COMPRESSION_OBJECTS[COMPRESSION_OBJECTS_NAMES.index(compression)]
+compression_object = index.COMPRESSION_CLASSES[COMPRESSION_CLASSES_NAMES.index(compression)]
 docs = GetDocs(filenames)
 
 ##Сохраняем URL в порядке загрузки

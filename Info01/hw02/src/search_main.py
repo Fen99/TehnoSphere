@@ -9,20 +9,19 @@ def ProcessString(query_str):
     #Распознаем запрос и исполняем дерево
     tokens = search.Tokenize(query_str)
     tree = search.GetQueryTree(tokens, idx_loaded)
-    results = []
+    result_str = ""
+    count_results = 0
     next_id = tree.Evaluate()
-    while next_id <= max_docid:
-        try:
-            results.append(urls[next_id])
-            next_id = tree.Evaluate()
-        except IndexError: #Если | !<...>, то дерево будет исполняться до INT32_MAX
-            break
+    while next_id < max_docid :
+        result_str += urls[next_id]+'\n'
+        next_id = tree.Evaluate()
+        count_results += 1
         
     #Вывод
-    print query_str
-    print len(results)
-    for url in results:
-        print url
+    print query_str.encode('utf-8')
+    print count_results
+    if count_results != 0:
+        print result_str[:-1]
 
 ##main
 #Читаем unicode
