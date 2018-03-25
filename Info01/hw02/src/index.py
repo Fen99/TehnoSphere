@@ -13,7 +13,7 @@ from collections import OrderedDict
 
 import datetime
 
-#Почему-то array.array('L') при extend не принимает числа > 2^31. Поэтому ограничим этим числом хэши
+#Почему-то array.array('I') при extend не принимает числа > 2^31. Поэтому ограничим этим числом хэши
 def Hash(val,  signed=True):
     return mmh3.hash(val,  signed) % 2147483648 #2^31 = 2147483648
     
@@ -25,7 +25,7 @@ def extract_words(text):
 
 #Классы для сжатия, реальзующие методы PackList, UnpackList
 #Могут использоваться как compression_class в NewIndex
-#PackArray - упаковывает array (unsigned int, 4 байта - 'L') в массив байт ('B') - в виде строки (!)
+#PackArray - упаковывает array (unsigned int, 4 байта - 'I') в массив байт ('B') - в виде строки (!)
 #UnpackArray - распаковывает бинарную строку в np.array (uint32)
 class Varbyte:
     @staticmethod
@@ -159,7 +159,7 @@ class Simple9:
     
     @staticmethod
     def UnpackArray(binary_data):
-        source_array = array.array('L')
+        source_array = array.array('I')
         source_array.fromstring(binary_data)
         source_numpy = np.array(source_array,  dtype=np.uint32)
         
@@ -196,17 +196,17 @@ class NoCompression:
         
 #Список возможных упаковщиков для поддержки поля <тип упаковки> в файлах индекса
 #Тип упаковки = позиция упаковщика в списке
-COMPRESSION_CLASSES = [Simple9,  Simple9]
+COMPRESSION_CLASSES = [Varbyte,  Simple9]
 DICTIONARY_COMPRESSION = NoCompression
 
 #Словарь для сохранения индекса в файл (при индексации документов)
 class NewDictionary:
     #Т.к. создается только при сохранении индекса, то мы уже знаем количество термов в словаре
     def __CreateArray(self):
-        return [array.array('L') for i in xrange(self.count_baskets)]
+        return [array.array('I') for i in xrange(self.count_baskets)]
     
     def __init__(self,  count_terms,  compression_class=DICTIONARY_COMPRESSION):
-        self.count_baskets = count_terms // 1024 + 1 # 1024 ключей в корзине в среднем, 1 корзина минимально
+        self.count_baskets = count_terms // 256 + 1 # 256 ключей в корзине в среднем, 1 корзина минимально
         self.terms_hashes = self.__CreateArray()
         self.terms_shifts = self.__CreateArray()
         self.terms_ends = self.__CreateArray()
@@ -216,7 +216,7 @@ class NewDictionary:
     #Формат хранения
     #<Хэши термов/Положения термов> <Положения корзин> <N>
     #(корзины перемещены в конец для возможности записи корзинок по очереди)
-    #<N> - количество корзин с ключами, в каждой, в среднем, до 1024 ключей (uint, 4 байта)
+    #<N> - количество корзин с ключами, в каждой, в среднем, до 256 ключей (uint, 4 байта)
     #<Положения корзин> - N чисел uint (4 байта) - положение содержимого каждой корзины в файле (в обратном порядке)
     #<Хэши термов/Положения термов> - содержимое корзины (возможно, сжатое),
     #представляет из себя две равные половины: первая половина - int (unsigned, 4 bytes) - хэши термов,
@@ -310,7 +310,34 @@ class NewIndex:
         self.index = OrderedDict()
         
         self.count_ids = 0 #Для учета размеров списков в индексе
+    
+    #Во избежание превышения памяти, записывает массивы термов в файл и очищает записанное
+    #Возвращает позиции концов списков (для словаря) и количество записанных байт
+    #shift - будущий сдвиг первого байта массива в файле (для словаря)
+    def __FlushPart(self, index_file,  arrays,  shift):
+        index_part = np.concatenate(tuple(arrays))
+        for arr in arrays:
+            del arr[:]
+            del arr
+        packed = self.compression_class.PackArray(index_part)
+        del index_part
+        to_write = packed.tobytes()
+        written = len(to_write)
+        index_file.write(to_write)
         
+        #Расчитываем позиции окончаний списков
+        #additional_value_len - сколько места занимает терминатор (268435455) при данном способе кодирования
+        if self.compression_class is Simple9:
+            end_positions = np.where(packed == MAX_SIMPLE9)[0] * 4 #Т.к. байты, а packed - массив uint32
+        if self.compression_class is Varbyte:
+            end_positions = np.where(packed == 255)[0]
+            for i in xrange(1,  4): #Еще 3 байта по 127
+                end_positions = end_positions[packed[end_positions-i] == 127]
+            end_positions -= 3 #перемещаем на начало
+        end_positions += shift
+        del packed
+        return end_positions, written
+    
     #Формат хранения:
     #<Тип упаковки (1 байт, индекс упаковщика в массиве COMPRESSION_CLASSES)
     #Далее - <Длина сжатого списка в байтах (4 байта)><Список docid сжатый, в бинарной форме>
@@ -323,36 +350,30 @@ class NewIndex:
             index_file.write(tmp_array.tostring()) #!+1
             
             #Строим индекс
-            #all_index = array.array('L')
-            all_arrays = []
+            arrays = []
+            end_positions_list = []
+            shift = 1
+            indices_written = 0
+            terms_counter = 0
+            indices_portion = self.count_ids // 5 #Записываем в 5 приемов
             for term,  doclist in self.index.iteritems():
+                indices_written += len(doclist)
+                terms_counter += 1
                 doclist.append(268435455) #268435455 = 2^28 - 1 - обозначение окончания индекса - 1 байт Simple9
-                all_arrays.append(doclist)
-            all_index = np.concatenate(tuple(all_arrays))
-            #print "Concated",  datetime.datetime.now()
-            for arr in all_arrays:
-                del arr[:]
-            packed = self.compression_class.PackArray(all_index)
-            del all_index
-            index_file.write(packed.tobytes())
-        #print "Packed+deleted 2",  datetime.datetime.now()
-        #Расчитываем позиции окончаний списков
-        #additional_value_len - сколько места занимает терминатор (268435455) при данном способе кодирования
-        if self.compression_class is Simple9:
-            end_positions = np.where(packed == MAX_SIMPLE9)[0] * 4 #Т.к. байты, а packed - массив uint32
-        if self.compression_class is Varbyte:
-            end_positions = np.where(packed == 255)[0]
-            for i in xrange(1,  4): #Еще 3 байта по 127
-                end_positions = end_positions[packed[end_positions-i] == 127]
-            end_positions -= 3 #перемещаем на начало 
-            
+                arrays.append(doclist)
+                if indices_written > indices_portion or terms_counter == len(self.index):
+                    current_end_positions, len_written = self.__FlushPart(index_file,  arrays,  shift)
+                    shift += len_written
+                    end_positions_list.append(current_end_positions)
+                    indices_written = 0
+
+        start = 1
+        end_positions = np.concatenate(tuple(end_positions_list))
         #Составляем словарь (+1 - первый бит документа)
-        shift = 1
         for i,  term in enumerate(self.index):
-            dictionary.AddTerm(term, shift,  end_positions[i]+1)
-            shift = end_positions[i]+5 #+4+1
+            dictionary.AddTerm(term, start,  end_positions[i])
+            start = end_positions[i]+4 #Длина терминатора
             
-        #print "Saving dictionary ...",  datetime.datetime.now()
         dictionary.SaveToFile(dict_filename)
         
     def IndexDocument(self,  docid,  text):
@@ -360,7 +381,7 @@ class NewIndex:
         for w in words:
             doclist = self.index.get(w)
             if doclist is None:
-                self.index.update({w: array.array('L')}) #uint, 4 bytes
+                self.index.update({w: array.array('I')}) #uint, 4 bytes
                 self.index[w].append(docid)
                 self.count_ids += 1
             elif self.index[w][-1] != docid:
@@ -377,7 +398,7 @@ class NewIndex:
 class LoadedIndex:
     def __init__(self,  index_filename,  dict_filename):
         self.index_file = open(index_filename,  'r+b')
-        self.index_mapped = mmap.mmap(self.index_file.fileno(),  0)
+        self.index_mapped = self.index_file.read()#mmap.mmap(self.index_file.fileno(),  0)
         self.compression_class = COMPRESSION_CLASSES[ord(self.index_mapped[0])] #Восстановление типа упаковки
         
         self.dictionary = LoadedDictionary(dict_filename,  self.compression_class)
@@ -396,7 +417,7 @@ class LoadedIndex:
         
     def Close(self):
         self.dictionary.Close()
-        self.index_mapped.close()
+        #self.index_mapped.close()
         self.index_file.close()
         
 #Класс индекса, собирающего другие во время оптимизации
