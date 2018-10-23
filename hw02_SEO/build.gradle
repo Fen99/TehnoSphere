@@ -1,0 +1,27 @@
+group = 'ru.mail.go'
+apply plugin: 'java'
+
+sourceCompatibility = 1.7
+targetCompatibility = 1.7
+
+repositories {
+    maven {
+        name = 'cloudera'
+        url = 'https://repository.cloudera.com/artifactory/cloudera-repos'
+    }
+    mavenCentral()
+}
+
+jar {
+    manifest {
+        attributes(
+                  'Main-Class': 'SeoOptimizationJob'
+//                'Main-Class': 'Test'
+        )
+    }
+}
+
+dependencies {
+    compile 'org.apache.hadoop:hadoop-common:2.6.0-cdh5.14.0'
+    compile 'org.apache.hadoop:hadoop-mapreduce-client-core:2.6.0-cdh5.14.0'
+}
