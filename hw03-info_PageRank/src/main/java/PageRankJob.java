@@ -1,10 +1,14 @@
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapred.JobClient;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapreduce.Cluster;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
@@ -18,15 +22,14 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 public class PageRankJob extends Configured implements Tool {
-    public final static int CountVertices = 2891873;
+    public final static int CountVertices = 1242460;
     public final static int StartCountVertices = 564548;
     private final static double Alpha = 0.9;
 
-    public final static long Normalizator = (long) 1e12;
+    public final static long Normalizator = (long) 1e9;
     private enum COUNTERS {
         ORPHAN_VERTICES_RANK,
         AVGERAGE_DELTA_PR,
-        MAXIMAL_DELTA_PR
     }
 
     public static class PageRankMapper extends Mapper<LongWritable, Text, IntWritable, Text> {
@@ -77,10 +80,19 @@ public class PageRankJob extends Configured implements Tool {
     }
 
     public static class PageRankReducer extends Reducer<IntWritable, Text, IntWritable, Text> {
+        private double rank_from_orphan_ = -1.0;
+
         @Override
         protected void reduce(IntWritable key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
-            double rank_from_orhan = ((double) context.getCounter(COUNTERS.ORPHAN_VERTICES_RANK).getValue()) / Normalizator / CountVertices;
-            double final_rank = (1.0 - Alpha)*(1.0 / CountVertices) + Alpha*rank_from_orhan; // Телепортация + "оставшийся" PR
+            if (rank_from_orphan_ == -1.0) {
+                Configuration conf = context.getConfiguration();
+                Cluster cluster = new Cluster(conf);
+                Job current_job = cluster.getJob(context.getJobID());
+                rank_from_orphan_ = ((double) current_job.getCounters().findCounter(COUNTERS.ORPHAN_VERTICES_RANK).getValue()) / Normalizator / CountVertices;
+                System.out.println(rank_from_orphan_);
+            }
+
+            double final_rank = (1.0 - Alpha)*(1.0 / CountVertices) + Alpha*rank_from_orphan_; // Телепортация + "оставшийся" PR
 
             String next_nodes = "";
             double prev_pr = 0.0;

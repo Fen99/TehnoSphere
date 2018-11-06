@@ -84,7 +84,9 @@ public class ExtractGraphJob extends Configured implements Tool {
                 return null;
             } else if (curr_url.getHost() == null) {
                 return null;
-            } else if (curr_url.getHost().lastIndexOf("lenta.ru") == -1) { // Сайт не с lenta.ru
+            } else if (curr_url.getHost().lastIndexOf("lenta.ru") == -1 ||
+                       curr_url.getHost().lastIndexOf(".lenta.ru") != -1 ||
+                       curr_url.getHost().lastIndexOf("compulenta.ru") != -1) { // Сайт не с lenta.ru (основного)
                 return null;
             }
 
@@ -104,19 +106,16 @@ public class ExtractGraphJob extends Configured implements Tool {
                 String[] parts = line.split("\t");
                 Integer id = Integer.parseInt(parts[0]);
                 String url_norm = NormalizeURL("", parts[1]);
-                if (url_norm == null) {
-                    continue;
-                }
-
-                if (!reverse) {
-                    ((HashMap<Integer, String>) destination).put(id, url_norm);
-                } else {
-                    ((HashMap<String, Integer>) destination).put(url_norm, id);
+                if (url_norm != null) {
+                    if (!reverse) {
+                        ((HashMap<Integer, String>) destination).put(id, url_norm);
+                    } else {
+                        ((HashMap<String, Integer>) destination).put(url_norm, id);
+                    }
                 }
 
                 line = reader.readLine();
             }
-
             reader.close();
         }
 
@@ -173,6 +172,9 @@ public class ExtractGraphJob extends Configured implements Tool {
 
             HashSet<String> links = GetLinks(documents_urls_.get(document_id), document);
             if (URLsIndexPath == "") { // Строим индекс ссылок
+                if (documents_urls_.get(document_id) == null) {
+                    throw new IOException("No id: "+document_id);
+                }
                 context.write(new Text(documents_urls_.get(document_id)), One);
                 for (String link: links) {
                     context.write(new Text(link), One);

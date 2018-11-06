@@ -1,8 +1,8 @@
 group = 'ru.mail.go'
 apply plugin: 'java'
 
-sourceCompatibility = 1.7
-targetCompatibility = 1.7
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
 
 repositories {
     maven {
@@ -15,8 +15,8 @@ repositories {
 jar {
     manifest {
         attributes(
-//                  'Main-Class': 'ExtractGraphJob'
-//                'Main-Class': 'PageRankJob'
+                //'Main-Class': 'ExtractGraphJob'
+                //'Main-Class': 'PageRankJob'
                 'Main-Class': 'HITSJob'
         )
     }
