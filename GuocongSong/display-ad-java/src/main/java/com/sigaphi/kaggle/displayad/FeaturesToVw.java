@@ -47,10 +47,10 @@ public class FeaturesToVw {
 			.forEach(col -> pop1.put(col, jedis.zrangeByScore(JOIN_KV.join("imp", col), 60d, 1e9)));
 		
 		featureGroupA = new HashSet<String>(Arrays.asList("C1", "C2", "C13",
-				"C4", "C5", "C6"));
-		featureGroupB = new HashSet<String>(Arrays.asList("C7", "C8", "C14"));
-		featureGroupC = new HashSet<String>(Arrays.asList("C15", "C3", "C10"));
-		featureGroupD = new HashSet<String>(Arrays.asList("C11", "C12"));
+				"C4", "C5", "C6", "C16", "C17", "C18", "C19"));
+		featureGroupB = new HashSet<String>(Arrays.asList("C7", "C8", "C14", "C21", "C22", "C23", "C24"));
+		featureGroupC = new HashSet<String>(Arrays.asList("C15", "C3", "C10", "C25", "C26", "C27", "C28"));
+		featureGroupD = new HashSet<String>(Arrays.asList("C11", "C12", "C29", "C30"));
 		Set<String> catFeatures = new HashSet<String>(RawFeature.catCols);
 		featureGroupG = catFeatures.stream()
 						.filter(e -> !featureGroupA.contains(e))

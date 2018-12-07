@@ -18,7 +18,6 @@ $TEST | $JAVA_BIN.FeaturesToVw | gzip > test.vw.gz
 
 echo "training model ..."
 $PYTHON_PATH ../scripts/vw_run.py poly_1 6 1
-mv prediction_test.txt prediction_test_q.txt
 
 echo "making a submission file"
 cat <(echo "Id,p1") <(paste -d"," <(tail -n +2 ../../data/sample_adv.txt | cut -f1 | cut -d"," -f1) prediction_test_Option.poly_1.txt) | $PYTHON_PATH ../scripts/submit.py

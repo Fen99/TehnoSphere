@@ -30,7 +30,7 @@ public class RawFeature {
 	
 	public static final List<String> numCols = IntStream.range(1, 3)
 			.mapToObj(i -> "I" + Integer.toString(i)).collect(Collectors.toList());
-	public static final List<String> catCols = IntStream.range(1, 16)
+	public static final List<String> catCols = IntStream.range(1, 31)
 			.mapToObj(i -> "C" + Integer.toString(i)).collect(Collectors.toList());
 	public static final List<String> catColsEx = new ArrayList<>();
 	static {
@@ -41,8 +41,8 @@ public class RawFeature {
 	public static final Set<String> catColsSet = new HashSet<String>(RawFeature.catCols);
 	public static final Set<String> catColsExSet = new HashSet<String>(RawFeature.catColsEx);
 
-	private static final List<String> reqstA = Arrays.asList("C15", "C11", "C9", "C14", "C7", "C12");
-	private static final List<String> reqstB = Arrays.asList("C13", "C10", "C1", "C6");
+	private static final List<String> reqstA = Arrays.asList("C6", "C11", "C9", "C7", "C12", "C5", "C10");
+	private static final List<String> reqstB = Arrays.asList("C17", "C5", "C8", "C15", "C13");
 			
 	private final Map<String, String> map = new HashMap<String, String>();
 	
@@ -53,6 +53,7 @@ public class RawFeature {
 			map.put(numCols.get(i), nums.get(i));
 		}
 		for (int i = 0; i < catCols.size(); i++) {
+			//System.out.print(cats.size());
 			map.put(catCols.get(i), cats.get(i));
 		}
 		String a = reqstA.stream().map(col -> this.getField(col, "")).collect(Collectors.joining("-"));
@@ -157,13 +158,13 @@ public class RawFeature {
 			if (id < 1379538000) { // Train
 				label = Integer.parseInt(els.get(1));
 				nums = els.subList(2, 4);
-				cats = els.subList(4, 19);
+				cats = els.subList(4, 34);
 			}
 			//case 40:
 			else { //Test
 				label = RawFeature.INT_NULL;
 				nums = els.subList(2, 4);
-				cats = els.subList(4, 19);
+				cats = els.subList(4, 34);
 				//break;
 			/*default:
 				throw new ArrayStoreException();*/

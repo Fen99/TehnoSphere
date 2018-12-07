@@ -41,6 +41,8 @@ class Option(Enum):
     def features(cls, val):
         return ' --l2 2e-8 -l 0.01'
         #return '--stage_poly --batch_sz 800000 --batch_sz_no_doubling --sched_exponent 1.96' \
+#        return ' --l2 2e-8 -l 0.1 --ftrl_alpha 0.01 --ftrl_beta 1e-5 --ftrl'
+
 
 # From original file:
   #      if val == Option.quad_11:
@@ -78,6 +80,7 @@ def train(fname, option, passes, shfl_win):
     pass_args = '--passes %s --holdout_off -C -0.4878' % passes
     features = Option.features(option)
 #From original file:    update = '--adaptive --invariant --power_t 0.5'
+#    update = '--power_t 0.2 --ftrl'
     update = '--adaptive --invariant --power_t 0.25'
     io = '-c --compressed -f log_bin.model -k'
     command = ' '.join([feeder, VW, loss, bits, pass_args, features, update,io])

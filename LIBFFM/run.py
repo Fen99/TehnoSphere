@@ -38,7 +38,7 @@ cmd = 'rm -f te.gbdt.out tr.gbdt.out'
 print(cmd)
 subprocess.call(cmd, shell=True) 
 
-cmd = './ffm-train -k 4 -t 25 -l 0.000005 -s {nr_thread} -p te.ffm tr.ffm model'.format(nr_thread=NR_THREAD) 
+cmd = './ffm-train -k 4 -t 25 -l 0.000005 -s {nr_thread} tr.ffm model'.format(nr_thread=NR_THREAD) 
 print(cmd)
 subprocess.call(cmd, shell=True)
 

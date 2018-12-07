@@ -37,7 +37,7 @@ with open(args['out_path'], 'w') as f:
             feats.append((field, feat))
 
         for i, feat in enumerate(line_gbdt.strip().split()[1:], start=1):
-            field = i + 31
+            field = i + 35
             feats.append((field, str(i)+":"+feat))
 
         feats = gen_hashed_fm_feats(feats, args['nr_bins'])
