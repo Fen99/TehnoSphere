@@ -1,0 +1,7 @@
+./gbdt
+./ffm-predict
+./ffm-train
+./model
+*.ffm
+*.out
+*.csv

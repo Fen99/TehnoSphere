@@ -1,0 +1,3 @@
+ffm-train
+ffm-predict
+*.o
