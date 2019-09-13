@@ -1,0 +1,3 @@
+[submodule "01_Cpp"]
+	path = 01_Cpp
+	url = https://github.com/mtrempoltsev/msu_cpp_autumn_2017
