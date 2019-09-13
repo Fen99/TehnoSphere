@@ -1,3 +1,6 @@
 [submodule "01_Cpp"]
 	path = 01_Cpp
 	url = https://github.com/mtrempoltsev/msu_cpp_autumn_2017
+[submodule "02_Cpp"]
+	path = 02_Cpp
+	url = https://github.com/Fen99/afina
